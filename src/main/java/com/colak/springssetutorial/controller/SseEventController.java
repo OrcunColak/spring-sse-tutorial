@@ -46,7 +46,8 @@ public class SseEventController {
         return emitter;
     }
 
-    @Scheduled(fixedRate = 5000) // Update every 5 seconds (adjust as needed)
+    // Update every 5 seconds
+    @Scheduled(fixedRate = 5_000)
     public void updateTodoRandomly() {
         log.info("Updating random data");
         String fakeString = faker.lorem().sentence();
