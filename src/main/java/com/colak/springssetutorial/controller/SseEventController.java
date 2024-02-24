@@ -1,25 +1,79 @@
 package com.colak.springssetutorial.controller;
 
+import com.colak.springssetutorial.model.ToDo;
+import com.colak.springssetutorial.repository.TodoRepository;
+import com.github.javafaker.Faker;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.time.LocalTime;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @RestController
-public class SseEventController {
 
-    // http://localhost:8080/events
-    @GetMapping(path = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+@RequiredArgsConstructor
+@Slf4j
+public class SseEventController {
+    private final CopyOnWriteArrayList<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+
+    private final TodoRepository repository;
+    private final Faker faker = new Faker();
+
+    // http://localhost:8080/home.html
+    // http://localhost:8080/todos/sse
+    @GetMapping(path = "/todos/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter eventStream() {
-        SseEmitter emitter = new SseEmitter();
-        ExecutorService sseMvcExecutor = Executors.newSingleThreadExecutor();
-        sseMvcExecutor.execute(() -> executeSseLogic(emitter));
+        log.info("Adding new emitter");
+
+        // Create an emitter that does not time out
+        SseEmitter emitter = new SseEmitter(0L);
+        emitters.add(emitter);
+
+        // Remove the emitter when it times out or completes
+        emitter.onCompletion(() -> emitters.remove(emitter));
+        emitter.onTimeout(() -> emitters.remove(emitter));
+
+        sendUpdates();
+
         return emitter;
+    }
+
+    @Scheduled(fixedRate = 5000) // Update every 5 seconds (adjust as needed)
+    public void updateTodoRandomly() {
+        log.info("Updating random data");
+        String fakeString = faker.lorem().sentence();
+        repository.updateTitle(fakeString);
+        sendUpdates();
+    }
+
+    private void sendUpdates() {
+        log.info("Emitter size : {}", emitters.size());
+
+        List<SseEmitter> emittersToRemove = new ArrayList<>();
+        List<ToDo> toDoList = repository.getToDoList();
+        for (SseEmitter emitter : emitters) {
+            for (ToDo toDo : toDoList) {
+                try {
+                    SseEmitter.SseEventBuilder sseEventBuilder = SseEmitter.event()
+                            .id(toDo.getTaskId())
+                            .data(toDo, MediaType.APPLICATION_JSON);
+                    emitter.send(sseEventBuilder);
+                } catch (Exception exception) {
+                    log.error(exception.getMessage());
+                    emitter.completeWithError(exception);
+                    emittersToRemove.add(emitter);
+                }
+            }
+        }
+        emitters.removeAll(emittersToRemove);
     }
 
     private void executeSseLogic(SseEmitter emitter) {
@@ -39,7 +93,7 @@ public class SseEventController {
         }
     }
 
-    private static SseEmitter.SseEventBuilder createEvent(int counter) {
+    private SseEmitter.SseEventBuilder createEvent(int counter) {
         // Event has these fields
         // id : The ID of the event
         // type : the type of event
