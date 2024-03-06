@@ -29,6 +29,7 @@ public class SseEventController {
 
     // http://localhost:8080/home.html
     // http://localhost:8080/todos/sse
+    // SseEmitter is actually a subclass of ResponseBodyEmitter and provides additional Server-Sent Event (SSE) support out-of-the-box.
     @GetMapping(path = "/todos/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter eventStream() {
         log.info("Adding new emitter");
