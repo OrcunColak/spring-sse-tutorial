@@ -1,7 +1,7 @@
-package com.colak.springssetutorial.controller;
+package com.colak.springtutorial.controller;
 
-import com.colak.springssetutorial.model.ToDo;
-import com.colak.springssetutorial.repository.TodoRepository;
+import com.colak.springtutorial.model.ToDo;
+import com.colak.springtutorial.repository.TodoRepository;
 import com.github.javafaker.Faker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,8 +11,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.io.IOException;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -64,10 +62,18 @@ public class SseEventController {
         for (SseEmitter emitter : emitters) {
             for (ToDo toDo : toDoList) {
                 try {
+
                     SseEmitter.SseEventBuilder sseEventBuilder = SseEmitter.event()
+                            // Used to identify the event and resume from where it left off if the connection is lost.
                             .id(toDo.getTaskId())
+                            // Specifies a custom event type.
+                            .name("update")
+                            // tells the client how many milliseconds to wait before trying again.
+                            .reconnectTime(5000)
+                            // The payload of the message.
                             .data(toDo, MediaType.APPLICATION_JSON);
                     emitter.send(sseEventBuilder);
+
                 } catch (Exception exception) {
                     log.error(exception.getMessage());
                     emitter.completeWithError(exception);
@@ -76,34 +82,5 @@ public class SseEventController {
             }
         }
         emitters.removeAll(emittersToRemove);
-    }
-
-    private void executeSseLogic(SseEmitter emitter) {
-        try {
-            for (int counter = 0; counter < 10; counter++) {
-                // Create an event with a custom event ID and data
-                SseEmitter.SseEventBuilder event = createEvent(counter);
-                // Send the event to the client
-                emitter.send(event);
-                // Wait for one second before sending the next event
-                Thread.sleep(1000);
-            }
-            // Mark the end of the event stream
-            emitter.complete();
-        } catch (IOException | InterruptedException exception) {
-            emitter.completeWithError(exception);
-        }
-    }
-
-    private SseEmitter.SseEventBuilder createEvent(int counter) {
-        // Event has these fields
-        // id : The ID of the event
-        // type : the type of event
-        // data : The event data
-        // reconnectTime : Reconnection time for the event stream
-        return SseEmitter
-                .event()
-                .id(String.valueOf(counter))
-                .data("Event data at " + LocalTime.now());
     }
 }

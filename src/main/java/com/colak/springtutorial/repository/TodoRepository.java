@@ -1,8 +1,8 @@
-package com.colak.springssetutorial.repository;
+package com.colak.springtutorial.repository;
 
-import com.colak.springssetutorial.model.ToDo;
-import com.colak.springssetutorial.model.ToDoSeverity;
-import com.colak.springssetutorial.model.ToDoStatus;
+import com.colak.springtutorial.model.ToDo;
+import com.colak.springtutorial.model.ToDoSeverity;
+import com.colak.springtutorial.model.ToDoStatus;
 import lombok.Getter;
 import org.springframework.stereotype.Component;
 

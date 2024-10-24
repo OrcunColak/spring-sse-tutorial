@@ -1,4 +1,4 @@
-package com.colak.springssetutorial.model;
+package com.colak.springtutorial.model;
 
 import lombok.Getter;
 
